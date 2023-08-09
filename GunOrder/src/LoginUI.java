@@ -2,6 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import javax.swing.table.DefaultTableModel;
 import java.sql.*;
 
 public class LoginUI extends JFrame {
@@ -21,11 +22,13 @@ public class LoginUI extends JFrame {
     private JTextField ageField;
     private JPasswordField newPasswordField;
     private JButton registerButton;
+    private JPanel registerPanel; // Add registerPanel
 
     private JPanel mainPanel;
     private JLabel titleLabel;
     private JButton logoutButton;
     private JTabbedPane tabbedPane;
+    private JPanel managementPanel; // Add managementPanel
 
     private String loggedInUser;
 
@@ -45,6 +48,20 @@ public class LoginUI extends JFrame {
         mainPanel = createMainPanel();
 
         add(loginPanel, BorderLayout.CENTER);
+
+        signinButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showRegisterPanel();
+            }
+        });
+
+        logoutButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                showLoginPanel();
+            }
+        });
 
         setVisible(true);
     }
@@ -139,6 +156,49 @@ public class LoginUI extends JFrame {
         return panel;
     }
 
+    private JPanel createRegisterPanel() {
+        JPanel panel = new JPanel(new GridLayout(5, 2));
+
+        JLabel newnameLabel = new JLabel("姓名：");
+        newUsernameField = new JTextField();
+        JLabel ageLabel = new JLabel("年龄：");
+        ageField = new JTextField();
+        JLabel newpasswordLabel = new JLabel("密码：");
+        newPasswordField = new JPasswordField();
+        registerButton = new JButton("注册");
+
+        panel.add(newnameLabel);
+        panel.add(newUsernameField);
+        panel.add(ageLabel);
+        panel.add(ageField);
+        panel.add(newpasswordLabel);
+        panel.add(newPasswordField);
+        panel.add(registerButton);
+
+        registerButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                register();
+            }
+        });
+
+        return panel;
+    }
+
+    private JPanel createManagementPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+
+        JLabel titleLabel = new JLabel("管理面板");
+        panel.add(titleLabel, BorderLayout.NORTH);
+
+        JButton someButton = new JButton("Some Action");
+        panel.add(someButton, BorderLayout.CENTER);
+
+        // Add other components for management panel as needed
+
+        return panel;
+    }
+
     private JPanel createInventoryPanel() {
         JPanel panel = new JPanel(new BorderLayout());
 
@@ -147,46 +207,59 @@ public class LoginUI extends JFrame {
         panel.add(titleLabel, BorderLayout.NORTH);
 
         // Add input fields and buttons for filtering
-        JTextField filterTextField = new JTextField(20);
+        JTextField nameFilterTextField = new JTextField(20);
+        JTextField ageFilterTextField = new JTextField(5);
         JButton searchButton = new JButton("Search");
 
         JPanel filterPanel = new JPanel();
         filterPanel.add(new JLabel("Filter By Name: "));
-        filterPanel.add(filterTextField);
+        filterPanel.add(nameFilterTextField);
+        filterPanel.add(new JLabel("Filter By Age: "));
+        filterPanel.add(ageFilterTextField);
         filterPanel.add(searchButton);
 
-        panel.add(filterPanel, BorderLayout.CENTER);
+        panel.add(filterPanel, BorderLayout.NORTH);
 
         // Add a table to display the results
         DefaultTableModel tableModel = new DefaultTableModel();
         JTable table = new JTable(tableModel);
         JScrollPane scrollPane = new JScrollPane(table);
-        panel.add(scrollPane, BorderLayout.SOUTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
 
         // Add action listener to the search button
         searchButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                String filterValue = filterTextField.getText().trim();
-                int filterMethod = 1; // Filter by name
-                GunOrderFilter gunOrderFilter = new GunOrderFilter(age);
-                gunOrderFilter.filterByColumn(filterMethod, filterValue);
+                String nameFilterValue = nameFilterTextField.getText().trim();
+                String ageFilterValue = ageFilterTextField.getText().trim();
 
-                // Update the table with filtered results
-                ResultSet rs = gunOrderFilter.getFilteredResultSet();
                 try {
-                    tableModel.setRowCount(0);
-                    while (rs.next()) {
-                        Object[] row = new Object[]{
-                                rs.getInt("idGuns_order"),
-                                rs.getString("nameGuns_order"),
-                                rs.getString("ammoGuns_order"),
-                                rs.getInt("ageGuns_order"),
-                                rs.getDouble("priceGuns_order"),
-                                rs.getString("typeGuns_order")
-                        };
-                        tableModel.addRow(row);
+                    Class.forName("com.mysql.jdbc.Driver");
+                    con = DriverManager.getConnection(url, user, pass);
+
+                    String sql = "SELECT * FROM guns_order WHERE nameGuns_order LIKE ? AND ageGuns_order = ?";
+                    try (PreparedStatement ptmt = con.prepareStatement(sql)) {
+                        ptmt.setString(1, "%" + nameFilterValue + "%");
+                        ptmt.setInt(2, Integer.parseInt(ageFilterValue));
+                        try (ResultSet rs = ptmt.executeQuery()) {
+                            tableModel.setRowCount(0);
+                            while (rs.next()) {
+                                Object[] row = new Object[]{
+                                        rs.getInt("idGuns_order"),
+                                        rs.getString("nameGuns_order"),
+                                        rs.getString("ammoGuns_order"),
+                                        rs.getInt("ageGuns_order"),
+                                        rs.getDouble("priceGuns_order"),
+                                        rs.getString("typeGuns_order")
+                                };
+                                tableModel.addRow(row);
+                            }
+                        }
                     }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(panel, "Please enter a valid age");
                 } catch (SQLException ex) {
+                    ex.printStackTrace();
+                } catch (Exception ex) {
                     ex.printStackTrace();
                 }
             }
@@ -194,7 +267,6 @@ public class LoginUI extends JFrame {
 
         return panel;
     }
-
 
     private JPanel createOrderPanel() {
         JPanel panel = new JPanel(new BorderLayout());
@@ -235,6 +307,8 @@ public class LoginUI extends JFrame {
         return panel;
     }
 
+
+
     private void login() {
         String username = usernameField.getText();
         String password = new String(passwordField.getPassword());
@@ -245,7 +319,7 @@ public class LoginUI extends JFrame {
         }
 
         try {
-            Class.forName("com.mysql.jdbc.Driver");
+            Class.forName("com.mysql.cj.jdbc.Driver");
             con = DriverManager.getConnection(url, user, pass);
 
             String sql = "SELECT * FROM user_info WHERE username=? AND password=?";
@@ -256,7 +330,7 @@ public class LoginUI extends JFrame {
                     if (rs.next()) {
                         loggedInUser = username;
                         JOptionPane.showMessageDialog(this, "登录成功");
-                        showMainPanel();
+                        showMainPanel(); // Show the main panel after successful login
                         logoutButton.setEnabled(true);
                     } else {
                         JOptionPane.showMessageDialog(this, "用户名或密码错误");
@@ -267,6 +341,7 @@ public class LoginUI extends JFrame {
             e.printStackTrace();
         }
     }
+
 
     private void register() {
         String username = newUsernameField.getText();
@@ -292,12 +367,12 @@ public class LoginUI extends JFrame {
                 ptmt.execute();
             }
 
-            JOptionPane.showMessageDialog(this, "注册成功，请登录");
+            JOptionPane.showMessageDialog(this, "Registration successful, please log in");
             showLoginPanel();
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "年龄请输入有效数字");
+            JOptionPane.showMessageDialog(this, "Please enter a valid age");
         } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this, "注册失败，用户名可能已存在");
+            JOptionPane.showMessageDialog(this, "Registration failed, username may already exist");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -320,6 +395,27 @@ public class LoginUI extends JFrame {
         loginPanel.setVisible(false);
         signinPanel.setVisible(true);
     }
+    private void showRegisterPanel() {
+        if (registerPanel == null) {
+            registerPanel = createRegisterPanel();
+            add(registerPanel, BorderLayout.CENTER);
+        }
+        registerPanel.setVisible(true);
+        loginPanel.setVisible(false);
+        signinPanel.setVisible(false);
+        tabbedPane.setVisible(false);
+    }
+
+    private void showManagementPanel() {
+        if (managementPanel == null) {
+            managementPanel = createManagementPanel();
+            add(managementPanel, BorderLayout.CENTER);
+        }
+        managementPanel.setVisible(true);
+        loginPanel.setVisible(false);
+        signinPanel.setVisible(false);
+        tabbedPane.setVisible(false);
+    }
 
     private void showMainPanel() {
         titleLabel.setText("靶场枪支管理系统 - 欢迎 " + loggedInUser);
@@ -339,6 +435,5 @@ public class LoginUI extends JFrame {
                 new LoginUI();
             }
         });
-
     }
 }
