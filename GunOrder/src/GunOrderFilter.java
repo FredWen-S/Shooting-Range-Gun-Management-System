@@ -89,4 +89,14 @@ public class GunOrderFilter {
                       + "\t\t" + priceGuns + "\t\t" + typeGuns);
     }
   }
+  public ResultSet getFilteredResultSet() throws SQLException {
+    // Returns the filtered ResultSet obtained from the filterByColumn method
+    String sql = "SELECT * FROM guns_order";
+    try (PreparedStatement ptmt = con.prepareStatement(sql)) {
+      try (ResultSet rs = ptmt.executeQuery()) {
+        return rs;
+      }
+    }
+  }
+
 }
