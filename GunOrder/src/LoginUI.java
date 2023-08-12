@@ -56,12 +56,14 @@ public class LoginUI extends JFrame {
             }
         });
 
+
         logoutButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                showLoginPanel();
+                logout();
             }
         });
+        
 
         setVisible(true);
     }
@@ -376,6 +378,8 @@ public class LoginUI extends JFrame {
         } catch (Exception e) {
             e.printStackTrace();
         }
+        JOptionPane.showMessageDialog(this, "Registration successful, please log in");
+        showLoginPanel();
     }
 
     private void showLoginPanel() {
@@ -386,6 +390,8 @@ public class LoginUI extends JFrame {
         loginPanel.setVisible(true);
         logoutButton.setEnabled(false);
         tabbedPane.setVisible(false);
+        registerPanel.setVisible(false);
+        managementPanel.setVisible(false);
     }
 
     private void showSigninPanel() {
@@ -415,6 +421,7 @@ public class LoginUI extends JFrame {
         loginPanel.setVisible(false);
         signinPanel.setVisible(false);
         tabbedPane.setVisible(false);
+        logoutButton.setEnabled(true);  // Enable the "Logout" button in the management panel
     }
 
     private void showMainPanel() {
@@ -422,13 +429,13 @@ public class LoginUI extends JFrame {
         signinPanel.setVisible(false);
         loginPanel.setVisible(false);
         tabbedPane.setVisible(true);
+        logoutButton.setEnabled(true);
     }
 
 
     private void logout() {
         showLoginPanel();
     }
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
